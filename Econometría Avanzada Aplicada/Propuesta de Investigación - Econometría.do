@@ -151,7 +151,7 @@ Estructura:
 	use "$bd1/ordenes_2019_2022.dta", clear
 	
 	append using "$bd1/adjudicaciones_2019_2022.dta"	
-	keep objetocontractual anio monto_uit ruc_contratista moneda ruc_entidad numeric_date
+	keep objetocontractual anio monto_uit ruc_contratista moneda ruc_entidad numeric_date entidad tipodecontratacion
 
 	gen dummy_2022 = (anio==2022)
 	
@@ -346,23 +346,79 @@ Estructura:
 	
 	merge m:1 ruc_contratista using "$bd1/basecontratistas.dta"
 	drop if _merge!=3
+	drop _merge
+	recode monto_uit (0/1 = 1) (1.00000001/2 = 2) (2.00000001/3 = 3) (nonmissing = 4), gen(cat_uit)
+	
+	label define cat_uit 1 "Menos de 1 UIT" 2 "Entre 1 y 2 UIT" 3 "Entre 2 y 3 UIT" 4 "Más de 3 UIT"
+	label values cat_uit cat_uit 
+	
+	preserve
+	keep if monto_uit>8  & monto_uit<=9 & dummy_2022==0 & objetocontractual!="CONSULTORIAS OBRAS"
+	collapse (count) n_compras=anio, by(ruc_entidad)
+	gen entidad_8_9=1
+	tempfile entidades_8_9
+	save `entidades_8_9'
+	restore
+	
+	merge m:1 ruc_entidad using "`entidades_8_9'"
 ********************************************************************************
 	
-*	6. Gráficos iniciales
-{	
-	graph twoway (histogram monto_uit if monto_uit < 25 & monto_uit >= 2 & objetocontractual == "BIENES" & dummy_2022 ==1, fcolor(gray) lcolor(black) xlabel(2(2)25) xmtick(, labels valuelabel noticks nogrid) name(graph_bienes_2022, replace) xtitle("Monto UIT") ytitle("Frequency") title("Bienes - 2022") ) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off)) 
+*	6. Gráficos 
 
-	graph twoway (histogram monto_uit if  monto_uit < 25 & monto_uit >= 2 & objetocontractual == "BIENES" & dummy_2022 ==0, fcolor(gray) lcolor(black) xlabel(2(2)25) xmtick(, labels valuelabel noticks nogrid) name(graph_bienes_otros, replace) xtitle("Monto UIT") ytitle("Frequency") title("Bienes - Otros")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+	global inicio 6
+	global fin 12
 
-	graph twoway (histogram monto_uit if  monto_uit < 25 & monto_uit >= 2 & objetocontractual == "SERVICIOS" & dummy_2022 ==1, fcolor(gray) lcolor(black) xlabel(2(2)25) xmtick(, labels valuelabel noticks nogrid) name(graph_servicios_2022, replace) xtitle("Monto UIT") ytitle("Frequency") title("Servicios - 2022")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+*	Gráfico N° 1
 
-	graph twoway (histogram monto_uit if  monto_uit < 25 & monto_uit >= 2 & objetocontractual == "SERVICIOS" & dummy_2022 ==0, fcolor(gray) lcolor(black) xlabel(2(2)25) xmtick(, labels valuelabel noticks nogrid) name(graph_servicios_otros, replace) xtitle("Monto UIT") ytitle("Frequency") title("Servicios - Otros")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))	
+	graph twoway (histogram monto_uit if tipodecontratacion=="Contrataciones hasta 9 UIT (D.U. 016 - 2022) (No incluye las derivadas de contrataciones por catálogo electrónico.)" & dummy_2022==1,  xtitle("Monto contratado (en UIT)") ytitle("Density") title("2022") fcolor(gray) lcolor(black) name(graph2022_9uit, replace)) (scatteri 0 9 1.5 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1.5 8, c(l) m(i), lcolor(red), legend(off)) 
 
-	graph twoway (histogram monto_uit if  monto_uit < 25 & monto_uit >= 2 & dummy_2022 ==0, fcolor(gray) lcolor(black) xlabel(2(2)25) xmtick(, labels valuelabel noticks nogrid) name(graph_bs_ss_otros, replace) xtitle("Monto UIT") ytitle("Frequency") title("Todos - Otros")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+	graph twoway (histogram monto_uit if tipodecontratacion=="Contrataciones hasta 8 UIT (LEY 30225)(No incluye las derivadas de contrataciones por catálogo electrónico.)" & dummy_2022==0 & monto_uit <10,  xtitle("Monto contratado (en UIT)") ytitle("Density") title("Años anteriores") fcolor(gray) lcolor(black) name(graphotros_años, replace)) (scatteri 0 9 1.5 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1.5 8, c(l) m(i), lcolor(red), legend(off)) 
 
-	graph twoway (histogram monto_uit if  monto_uit < 25 & monto_uit >= 2 & dummy_2022 ==1, fcolor(gray) lcolor(black) xlabel(2(2)25) xmtick(, labels valuelabel noticks nogrid) name(graph_bs_ss_2022, replace) xtitle("Monto UIT") ytitle("Frequency") title("Todos - 2022")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+	graph combine graphotros_años graph2022_9uit  , cols(2) title("Gráfico N°1: Distribución de compras directas según año", size(large))
+	graph export "$bd2/Graph1.png", replace
 
-	graph combine graph_bienes_otros graph_bienes_2022  graph_servicios_otros graph_servicios_2022 graph_bs_ss_otros graph_bs_ss_2022, cols(2) ///
-    title("Distribución de compras según año y tipo de objeto", size(large))
 	
-}	
+*	Gráfico N° 2
+	
+	graph twoway (histogram monto_uit if monto_uit < $fin & monto_uit >= $inicio & objetocontractual == "BIENES" & dummy_2022 ==1, fcolor(gray) lcolor(black) xlabel($inicio(2)$fin) xmtick(, labels valuelabel noticks nogrid) name(graph_bienes_2022, replace) xtitle("Monto UIT") ytitle("Frequency") title("Bienes - 2022") ) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off)) 
+
+	graph twoway (histogram monto_uit if monto_uit < $fin & monto_uit >= $inicio & objetocontractual == "BIENES" & dummy_2022 ==0, fcolor(gray) lcolor(black) xlabel($inicio(2)$fin) xmtick(, labels valuelabel noticks nogrid) name(graph_bienes_otros, replace) xtitle("Monto UIT") ytitle("Frequency") title("Bienes - Otros")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+
+	graph twoway (histogram monto_uit if monto_uit < $fin & monto_uit >= $inicio & objetocontractual == "SERVICIOS" & dummy_2022 ==1, fcolor(gray) lcolor(black) xlabel($inicio(2)$fin) xmtick(, labels valuelabel noticks nogrid) name(graph_servicios_2022, replace) xtitle("Monto UIT") ytitle("Frequency") title("Servicios - 2022")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+
+	graph twoway (histogram monto_uit if monto_uit < $fin & monto_uit >= $inicio & objetocontractual == "SERVICIOS" & dummy_2022 ==0, fcolor(gray) lcolor(black) xlabel($inicio(2)$fin) xmtick(, labels valuelabel noticks nogrid) name(graph_servicios_otros, replace) xtitle("Monto UIT") ytitle("Frequency") title("Servicios - Otros")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))	
+
+	graph twoway (histogram monto_uit if monto_uit < $fin & monto_uit >= $inicio & dummy_2022 ==0 & objetocontractual != "CONSULTORIAS OBRAS", fcolor(gray) lcolor(black) xlabel($inicio(2)$fin) xmtick(, labels valuelabel noticks nogrid) name(graph_bs_ss_otros, replace) xtitle("Monto UIT") ytitle("Frequency") title("Bienes y servicios - Otros")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+
+	graph twoway (histogram monto_uit if monto_uit < $fin & monto_uit >= $inicio & dummy_2022 ==1 & objetocontractual != "CONSULTORIAS OBRAS", fcolor(gray) lcolor(black) xlabel($inicio(2)$fin) xmtick(, labels valuelabel noticks nogrid) name(graph_bs_ss_2022, replace) xtitle("Monto UIT") ytitle("Frequency") title("Bienes y servicios - 2022")) (scatteri 0 9 1 9, c(l) m(i), lcolor(red), legend(off)) (scatteri 0 8 1 8, c(l) m(i), lcolor(red), legend(off))
+
+	graph combine graph_bienes_otros graph_servicios_otros graph_bs_ss_otros graph_bienes_2022 graph_servicios_2022 graph_bs_ss_2022, rows(2) ///
+    title("Gráfico N°2: Distribución de compras según año y tipo de objeto", size(medium))
+	graph export "$bd2/Graph2.png", replace
+	
+*	Gráfico N° $inicio - Test de MaCrary
+
+	DCdensity monto_uit if  monto_uit < $fin & monto_uit >= $inicio & dummy_2022 ==1 & objetocontractual == "BIENES" & entidad_8_9==1, breakpoint(9) generate(Xj Yj r0 fhat se_fhat) 
+	graph save "$bd2/Graph$inicio.gph", replace
+
+	drop Xj Yj r0 fhat* se_fhat
+	
+	DCdensity monto_uit if  monto_uit < $fin & monto_uit >= $inicio & dummy_2022 ==1 & objetocontractual == "SERVICIOS" & entidad_8_9==1, breakpoint(9) generate(Xj Yj r0 fhat se_fhat) 
+	graph save "$bd2/Graph4.gph", replace
+
+	graph combine "$bd2/Graph3.gph" "$bd2/Graph4.gph", title("Gráfico N° 3: Test de McCrary para densidad de monto de compra", size(medium))
+	graph export "$bd2/Graph3.png", replace
+	
+* 	Gráfico N° 4 - RdPlot
+
+	global depvar "duracion_multas_prom monto_acum penalidad inhabilitacion multas contratista_dudoso1 contratista_dudoso2"
+	
+	foreach x of varlist $depvar {
+	
+	rdplot `x' monto_uit if monto_uit < $fin & monto_uit >= $inicio & objetocontractual == "SERVICIOS" & dummy_2022 ==1, c(9) p(1) triangular graph_options(name(rdplot_`x', replace) title("`x'") legend(off)) ci(.95)
+	
+	}
+	
+	graph combine rdplot_duracion_multas_prom rdplot_monto_acum rdplot_penalidad rdplot_inhabilitacion rdplot_multas rdplot_contratista_dudoso1 rdplot_contratista_dudoso2, rows(2) title("Gráfico N° 4: Gráficos de regresión discontinua", size(medium))
+	graph export "$bd2/Graph4.png", replace
+	
