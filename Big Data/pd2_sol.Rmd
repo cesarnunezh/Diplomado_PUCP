@@ -1,0 +1,294 @@
+---
+title: "pd2"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+setwd("G:/Mi unidad/QLAB/Sampling/PD2")
+library(survey)
+library(tidyverse)
+library(foreign)
+library(haven)
+library(dplyr)
+```
+
+Empezaremos viendo cómo extraer muestras 
+```{r}
+cpv = read_dta("cpv2017_pob07mod.dta")
+```
+
+
+Muestreo Aleatorio Simple (MAS)
+```{r}
+set.seed(123456) # Clave para poder replicar
+mas1 <- cpv[sample(1:nrow(cpv) , size = 994), ]
+mas2 <- cpv %>%
+  slice_sample(prop = 0.001)
+mas3 <- cpv %>%
+  slice_sample(n = 994)
+```
+
+
+Muestreo Aleatorio Estratificado (MAE)
+```{r}
+set.seed(123456) # Clave para poder replicar
+mae1 <- cpv %>%
+  group_by(c5_p2) %>%
+  slice_sample(prop = 0.001)
+```
+
+
+¿Cómo introducir diseño muestral?
+```{r}
+set.seed(123456) # Clave para poder replicar
+data(api) # Ejemplo de Lumley
+
+## MAS ##
+mas_d <- svydesign(id = ~1 , fpc = ~fpc , data = apisrs)
+svytotal(~enroll , mas_d)
+svymean(~enroll , mas_d)
+```
+
+
+```{r}
+## MAE ##
+set.seed(123456) # Clave para poder replicar
+mae_d <- svydesign(id = ~1 , fpc = ~fpc , data = apistrat , strata = ~stype)
+svytotal(~enroll , mae_d)
+svymean(~enroll , mae_d)
+
+```
+
+
+Extraer muestra + introducir diseño muestral
+MAS
+```{r}
+## MAS 
+# Extraemos muestra (MAS)
+mas4 <- cpv %>%
+  slice_sample(prop = 0.001)
+
+mas4 = mutate(mas4 , fpc = 994494 , pw = 994494/994 , n = 1 , .keep = "all")
+mas4_d = svydesign(id = ~1 , fpc = ~fpc , data = mas4)
+mas4_dw = svydesign(id = ~1 , fpc = ~fpc , weights =~pw , data = mas4)
+
+#Promedios
+svymean(~c5_p4_1 , mas4_d)
+svymean(~c5_p4_1 , mas4_dw)
+```
+
+
+```{r}
+MAE
+```{r}
+# Dummy de sexo
+cpv = mutate(cpv , sexo = ifelse(c5_p2 == 1 , 1 , 0) , .keep = "all")
+
+# Contamos para fpc (estrato)
+cpv %>%
+  count(sexo)
+
+# Extraemos muestra (MAE)
+mae4 <- cpv %>%
+   group_by(sexo) %>%
+  slice_sample(prop = 0.001)
+
+mae4 <- mae4 %>%
+  mutate(fpce = case_when(
+    sexo == 0 ~ 508712 ,
+    sexo == 1 ~ 485782) , .keep = "all")
+
+mae4_d = svydesign(id = ~1 , fpc = ~fpce , data = mae4 , strata = ~sexo)
+
+svymean(~c5_p4_1 , mae4_d)
+```
+
+
+
+Solucionario de la Tarea 1
+**************************
+
+Parte I
+Pregunta 1
+D
+M
+M
+D
+
+Pregunta 2
+a. Se espera que el error estándar disminuya
+b. Ver libro de Valdiviezo
+c. Es la inversa de la probabilidad de ser seleccionado en la muestra. Permite que la muestra pueda ser expandida a la población que representa
+d. Se espera que el erro disminuya. Esto se debe a que se explota información adicional: los estratos
+e. Es un ratio que mide el efecto del diseño muestral en la varianza, respecto a un MAS. 
+
+
+```{r}
+cenagroO = read_dta("cenagro2012_mod.dta")
+
+cenagro <- cenagroO %>%
+  mutate(ppquechua = ifelse(lengua == 1 , 1 , 0) , 
+         rango_edad = case_when(
+           edad <= 24 ~ 1 ,
+           edad > 24 & edad <= 64 ~ 2 ,
+           edad > 64 ~ 3))
+```
+
+
+Pregunta 3
+```{r}
+set.seed(190190)
+mas_cen <- cenagro %>%
+  slice_sample(prop = 0.001)
+
+# 1
+mas_cen <- mas_cen %>%
+  mutate(suma = sum(sup_total) , .keep = "all")
+
+# 2 
+mas_cen <- mas_cen %>%
+  mutate(promedio = mean(sup_total) , .keep = "all")
+
+# 3
+mas_cen <- mas_cen %>%
+  mutate(sf = 2246 / 2246702 , .keep = "all")
+
+# 4
+mas_cen <- mas_cen %>%
+  mutate(fpc = 1 - sf , .keep = "all")
+
+# 5 
+mas_cen <- mas_cen %>%
+  mutate(sqd = (sup_total - promedio)^2) %>%
+  mutate(ssqd = sum(sqd) , .keep = "all")
+
+# 6 
+mas_cen <- mas_cen %>%
+  mutate(svar = (1/2245)*ssqd , .keep = "all")
+
+# 7
+mas_cen <- mas_cen %>%
+  mutate(svar_prom = fpc * (svar /  2246) , .keep = "all")
+
+# 8
+mas_cen <- mas_cen %>%
+  mutate(se_prom = svar_prom ^ (1/2) , .keep = "all")
+
+# 9
+mas_cen <- mas_cen %>%
+  mutate(factor = 2246702/2247 , n = 1)
+# Rpta. La sumatoria de los factores corresponde la la población total
+
+# Prueba 
+# mas_cen <- mas_cen %>%
+#  mutate(N = 2246702 , .keep = "all")
+
+mas_cen_d <- svydesign(id = ~1 , weights = ~factor , data = mas_cen)
+
+svymean(~sup_total , mas_cen_d)
+svytotal(~n , mas_cen_d)
+svytotal(~ppquechua , mas_cen_d)
+  
+```
+
+
+Pregunta 4
+```{r}
+set.seed(190190)
+mae_cen <- cenagro %>%
+  group_by(rango_edad) %>%
+  slice_sample(prop = 0.001)
+
+# 1
+mae_cen <- mae_cen %>%
+  group_by(rango_edad) %>%
+  mutate(suma = sum(ppquechua) , .keep = "all")
+
+# 2 
+mae_cen <- mae_cen %>%
+  group_by(rango_edad) %>%
+  mutate(promedio = mean(ppquechua) , .keep = "all")
+
+# 3
+mae_cen <- mae_cen %>%
+  mutate(sf = case_when(
+    rango_edad == 1 ~ 114/114647 ,
+    rango_edad == 2 ~ 1665/1665605 ,
+    rango_edad == 3 ~ 466/466450) , .keep = "all")
+
+# 4
+mae_cen <- mae_cen %>%
+  mutate(fpc = 1 - sf , .keep = "all")
+
+# 5 
+mae_cen <- mae_cen %>%
+  mutate(sqd = (ppquechua - promedio)^2) %>%
+  mutate(ssqd = sum(sqd) , .keep = "all")
+
+# 6 
+mae_cen <- mae_cen %>%
+  mutate(svar = case_when(
+    rango_edad == 1 ~ (1/113)*ssqd ,
+    rango_edad == 2 ~ (1/1664)*ssqd ,
+    rango_edad == 3 ~ (1/465)*ssqd) , .keep = "all")
+
+# 7
+mae_cen <- mae_cen %>%
+  mutate(svar_prom = case_when(
+    rango_edad == 1 ~ fpc * (svar / 114) ,
+    rango_edad == 2 ~ fpc * (svar / 1665) ,
+    rango_edad == 3 ~ fpc * (svar / 466)) , .keep = "all")
+
+# 8
+mae_cen <- mae_cen %>%
+  mutate(se_prom = svar_prom ^ (1/2) , .keep = "all")
+
+# 9
+mae_cen <- mae_cen %>%
+  mutate(factor = case_when(
+    rango_edad == 1 ~ 114647/114 ,
+    rango_edad == 2 ~ 1665605/1665 ,
+    rango_edad == 3 ~ 466450/466) ,
+    n = 1 , .keep = "all")
+# Rpta. La sumatoria de los factores corresponde la la población total
+
+# Prueba
+mae_cen_d <- svydesign(id = ~1 , weights = ~factor , strata = ~rango_edad , data = mae_cen)
+
+svymean(~ppquechua , mae_cen_d)
+svytotal(~n , mae_cen_d)
+svytotal(~ppquechua , mae_cen_d)
+svyby(~ppquechua , ~rango_edad , mae_cen_d , svymean)
+
+# 4.3 
+# Rpta. Se puede utilizar un promedio ponderado para obtener el promedio de la variable ppquechua para toda la muestra 
+```
+
+
+
+```{r}
+mae_cen %>%
+  count(rango_edad)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
