@@ -6,6 +6,8 @@ Objetivo: Responder las preguntas de la Tarea 1
 Estructura:
 	
 	0. Direcciones
+	1. Parte I
+	2. Parte I
 
 
 ********************************************************************************/
@@ -14,8 +16,46 @@ Estructura:
 	clear all
 	global bd0 "C:\Users\User\Documents\GitHub\Diplomado_PUCP\Big Data\Data"
 
-	
 ********************************************************************************/
+*	1. Parte I
+
+/*	1. Indique la veracidad o falsedad de las siguientes afirmaciones:
+		a.	Falso. La media muestral no siempre es la misma en tanto la aleatoriedad
+			no te garantiza que siempre tendrás las mismas observaciones y por ende 
+			tendrás siempre valores diferentes entre una y otra muestra. 
+		b.	Falso, si disminuye el tamaño de muestra el error estandar de la media 
+			muestral aumenta. Esto asociado a la Ley de Grandes Números, la cual dice 
+			que en la medida que aumente el tamaño de la muestra (hasta el infinito), 
+			la media muestral se aproximará cada vez más a la poblacional. En otras 
+			palabras, el error estandar disminuye hasta aproximadamente cero cuando 
+			aumenta el tamaño de la muestra. 
+		c.	Es posible, pero NO es lo más probable. Hay que diferenciar la distribución
+			del estimador del estimado. Es decir, puede que se dé el caso en el que, con 
+			una muestra pequeña, se obtenga una media muestral muy cercana a la media 
+			poblacional (estimado); sin embargo, esto no necesariamente ocurrirá en todos
+			los casos si se repite n veces la realización de la muestra del mismo tamaño 
+			(distribución del estimador). En conclusión, puede que una media muestral sea
+			más cercana a la poblacional incluso con menor tamaño de muestra; sin embargo,
+			si este ejercicio se realiza varias veces, lo más probable, es que la que más
+			se aproxime en promedio sea la de mayor tamaño de muestra. 
+		d.	Verdadero. Sí existe un trade-off entre número de conglomerados y el número
+			de observaciones por conglomerados, dado un mismo tamaño de muestra. A mayor 
+			número de conglomerados, hay una mayor varianza que puede aportar a las 
+			estimaciones, pero esto implica un menor número de varianza dentro de cada 
+			cluster lo que afecta también a la precisión de las estimaciones. 
+		
+	2.	Indique a qué enfoque (diseño o modelo) corresponde cada una de las siguientes características:
+		a.	Asume una población finita --> Enfoque de diseño
+		b.	Asume que la variable objetivo es aleatoria --> Enfoque de modelo
+		c.	Asume un proceso generador de datos --> Enfoque de modelo
+		d.	Asume que el componente aleatorio viene de cómo seleccionamos las observaciones --> Enfoque de diseño
+
+
+	3.	Responda tres de las siguientes preguntas. La respuesta a cada pregunta no debe pasar de 75 palabras.
+
+
+********************************************************************************/
+*	2. Parte II
 * 	1. Pregunta 1 - Calculo de variables
 
 	use "$bd0/Data para Tarea1.dta", clear
