@@ -15,6 +15,7 @@ Estructura:
 
 	clear all
 	global bd0 "C:\Users\User\Documents\GitHub\Diplomado_PUCP\Big Data\Data"
+	global bd1 "C:\Users\User\Documents\GitHub\Diplomado_PUCP_trabajos\Big Data\Data"
 
 ********************************************************************************/
 *	1. Parte I
@@ -52,7 +53,11 @@ Estructura:
 
 
 	3.	Responda tres de las siguientes preguntas. La respuesta a cada pregunta no debe pasar de 75 palabras.
-
+		
+		a. Los estratos son subconjuntos que son heterogéneos entre sí pero homogéneos entre ellos, la idea es extraer una muestra independiente de cada estrato. En cambio, los dominios son sub grupos de la población pre definidios y se busca obtener resultados sobre ellos con cierto margen de error. La muestra agregada de los dominios representan a la población total y suelen ser espacios geográficos o político administrativo
+		b. El factor de expansión permite extrapolar los resultados de la variable de interés para el universo de estudio sobre el cual se basó la muestra. Se construye mediante la inversa de la porbabilidad de ser elegido una unidad de muestreo
+		c. Se esperaría que el error estándar disminuya dado que al estratificar el diseño muestral obtenemos estimaciones más precisas con la segmentación en grupos.
+		
 
 ********************************************************************************/
 *	2. Parte II
@@ -106,7 +111,7 @@ Estructura:
 	
 *	4.	Extraer una Muestra Aleatoria Estratificada (MAE) de 2247 observaciones utilizando la variable “rango_edad” como estrato. Con esta muestra, utilizar la variable “pp_lenguanativa” y: 
 
-	use "$bd0/Data para Tarea1.dta", clear
+	use "$bd1/Data para Tarea1.dta", clear
 
 	recode edad (12/24 = 1) (25/64 = 2) (nonmissing = 3) , gen(rango_edad)
 	
@@ -118,15 +123,68 @@ Estructura:
 	
 	set seed 1100839
 
-	bsample round(0.001*_N), strata(estrato) 
-
+	bys estrato: sample 0.1
+	bys estrato: count
+	
+	gen pw =  114647/115 if estrato == 1
+	replace pw = 1665605/1666 if estrato == 2
+	replace pw = 466450/466 if estrato == 3
+	
+	gen fpc = 114647 if estrato == 1
+	replace fpc = 1665605 if estrato == 2
+	replace fpc = 466450 if estrato == 3
+	
+	*bsample round(0.001*_N), strata(estrato) 
 	
 *	4.1.	Obtener los mismos estadísticos de las preguntas 3.1-3.9 según la variable de estratificación (intra estrato).
 
+	*1.	La suma de todos los valores
+	bys rango_edad: egen suma_total = total(pp_lenguanativa)
+	
+	*2.	La media
+	bys rango_edad: egen media = mean(pp_lenguanativa)
+	
+	*3.	La fracción muestral
+	gen frac_muestral=  115/114647 if estrato == 1
+	replace frac_muestral = 1666 /1665605 if estrato == 2
+	replace frac_muestral = 466/466450 if estrato == 3
+	
+	*4.	La corrección de población finita (fpc)
+	gen corr_pob_finita = 1 - frac_muestral if estrato == 1
+	replace  corr_pob_finita = 1 - frac_muestral if estrato == 2
+	replace  corr_pob_finita = 1 - frac_muestral if estrato == 3
+	
+	*5.	La suma de desviaciones al cuadrado
+	bys rango_edad: gen desv_2 = (pp_lenguanativa - media)^2
+	bys rango_edad: egen sum_desv_2 = total(desv_2)
+
+	*6.	La varianza de la muestra
+	gen var_muestra = (1/114)*sum_desv_2 if estrato == 1
+	replace var_muestra = (1/1665)*sum_desv_2 if estrato == 2
+	replace var_muestra = (1/465)*sum_desv_2 if estrato == 3	
+	
+	*7.	La varianza muestral de la media
+	gen var_muestral_media = var_muestra * corr_pob_finita / 115 if estrato == 1
+	replace var_muestral_media = var_muestra * corr_pob_finita / 1666 if estrato == 2
+	replace var_muestral_media = var_muestra * corr_pob_finita / 466 if estrato == 3
+	
+	*8.	El error estándar de la media
+	bys rango_edad: gen se_media = var_muestral_media^0.5
+	
+	*9.	El factor de expansión de cada observación
+	gen factor_exp = (1/frac_muestral)
 
 *	4.2.	Declare el diseño muestral y obtenga el promedio de la variable “pp_lenguanativa” para toda la muestra utilizando el diseño muestral
 
+	svyset, clear 
+	svyset [pweight = pw], strata(estrato) fpc(fpc)
+	svydes
+	
+	svy: mean pp_lenguanativa
 
 *	4.3.	Discuta como pueden utilizarse los resultados obtenidos en 4.1 para poder calcular el promedio de la variable “pp_lenguanativa” para toda la muestra.
 
+	* Se puede calcular el promedio de la muestra para la variable "pp_lenguanativa" mediante la división entre i) la suma de las medias de cada strato ponderado por el tamaño de cada estrato y ii) el tamaño de la muestra. De esta manera:
 	
+	tab media
+	display ((0.2956522*115) + (0.3829532*1666) + (0.3969957*466))/2247
