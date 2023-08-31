@@ -1,0 +1,152 @@
+---
+title: "pd3"
+date: "20/08/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Clear Global environment
+rm(list=ls()) 
+```
+
+
+```{r}
+setwd("G:/Mi unidad/QLAB/Sampling/PD3")
+library(survey)
+library(sampling)
+library(tidyverse)
+library(foreign)
+library(haven)
+library(dplyr)
+```
+
+
+Bases que usaremos durante la PD
+```{r}
+cpv = read_dta("cpv2017_pob07mod2.dta")
+```
+
+
+¿Cómo sacar una muestra con conglomerados (una etapa)?
+******************************************************
+```{r}
+# Procedimiento más "manual"
+# Queremos muestrear conglomerados aleatoriamente.
+
+# Primero necesitamos una base de los conglomerados
+base_clusters <- cpv %>%
+  count(idcluster)
+
+# Segundo, obtenemos la muestra aleatoria de conglomerados
+set.seed(20230820)
+mac1_clusters <- base_clusters %>%
+  slice_sample(prop = 0.01)
+
+# Tercero, juntamos las bases para tener las observaciones de los clusters elegidos
+mac1_f <- merge(x = cpv , y = mac1_clusters , by = c("idcluster"))
+
+```
+
+
+¿Cómo sacar una muestra con conglomerados (multietápica)?
+*********************************************************
+```{r}
+# Ahora queremos muestrear conglomerados aleatoriamente, para luego elegir unidades aleatoriamente al interior de cada conglomerado. En este caso, nos apoyaremos en las bases obtenidas del ejercicio anterior. 
+
+# Primero necesitamos una base de los conglomerados
+  # Ya tenemos la base de conglomerados
+
+# Segundo, obtenemos la muestra aleatoria de conglomerados
+  # Usaremos la muestra de conglomerados del ejercicio anterior:       mac1_clusters
+
+# Tercero, juntamos las bases para tener las observaciones de los clusters elegidos
+  # Ya tenemos la base mac1_f 
+
+# Cuarto, muestreamos al interior de cada cluster. Tenemos 80 clusters y seleccionaremos 100 obs de cada uno. 
+set.seed(11041996)
+mac2_f <- mac1_f %>%
+  group_by(idcluster) %>%
+  slice_sample(n = 100)
+
+# Preguntas:
+  # Por qué mac1_fM tiene 5890 obs? 
+  # Qué hacemos para combinar estratos y conglomerados?
+    # -> agregar un paso en el que se definan los estrato
+```
+
+
+Declarar el diseño muestral
+***************************
+- Los diseños multietápicos se declaran como "fórmulas" de variables de la base
+```{r}
+# Ejemplo Lumley #
+data(api)
+
+# En este caso se utilizan los distritos como conglomerados (dnum es el identificador de cada distrito). Luego, al interior de cada distrito se muestrean escuelas (snum el identificador de cada escuela). Así, los distritos vienen a ser PSU y las escuelas SSU. 
+# fpc1 tiene el total de distritos, fpc2 el total de escuelas por distrito
+# Como se declaran la población total y por conglomerado, no se necesita declarar weights
+clus2_design <- svydesign(id = ~dnum+snum , fpc = ~fpc1+fpc2 , data = apiclus2)
+```
+
+
+Ejemplos con muestras extraidas del CPV
+```{r}
+# Muestreo de una etapa
+
+# Agregar variables relevantes
+mac1_f <- mac1_f %>%
+  mutate(fpc1 = 8036 , .keep = "all")
+
+# Declarar diseño muestral
+mac1_f_d = svydesign(id = ~idcluster , fpc = ~fpc1 , data = mac1_f)
+
+# Promedio
+svymean(~c5_p4_1 , mac1_f_d)
+
+```
+
+
+```{r}
+# Muestreo de dos etapas
+
+# Agregar variables relevantes
+mac2_f <- mac2_f %>%
+  mutate(fpc1 = 8036 , fpc2 = cluster_n , .keep = "all")
+
+# Diseño muestral
+mac2_f_d = svydesign(id = ~idcluster+id_pob_imp_f , fpc = ~fpc1+fpc2 , data = mac2_f)
+
+# Promedio
+svymean(~c5_p4_1 , mac2_f_d)
+
+```
+
+
+
+Ejemplo aplicado: La ENAHO
+```{r}
+enaho100 <- read_dta("enaho01-2018-100.dta")
+```
+
+```{r}
+# Eliminar observaciones irrelevantes y generar variable de acceso a agua por Red Pública dentro de la vivienda
+enaho100_mod <- enaho100 %>%
+  subset(result == 1 | result == 2) %>%
+  mutate(agua_rpd = ifelse(p110 == 1 , 1 , 0))
+
+# Declarar el diseño muestral
+enaho_svy = svydesign(id = ~conglome+vivienda , strata = ~estrato , weights = ~factor07 , data = enaho100_mod)
+
+# Promedio
+svymean(~agua_rpd , enaho_svy)
+```
+
+
+
+
+
+
