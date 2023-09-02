@@ -43,12 +43,12 @@ twice_a = twice.get()
 import pyopencl.clrandom as clrand
 
 n = 10**6
-a = clrand.rand(queue, n, np.float(32))
-b = clrand.rand(queue, n, np.float(32))
+a = clrand.rand(queue, n, dtype=float)
+b = clrand.rand(queue, n, dtype=float)
 
 # Map operations
-a = clrand.rand(queue, n, np.float(32))
-b = clrand.rand(queue, n, np.float(32))
+a = clrand.rand(queue, n, dtype=float)
+b = clrand.rand(queue, n, dtype=float)
 c1 = 5*a + 6*b
 result_np = c1.get()
 
@@ -61,11 +61,12 @@ c2 = cl.array.empty_like(a)
 lin_comb(5, a, 6, b, c2)
 result_np = c2.get()
 
-# Reduce operations 
+# Reduce operations
+import pyopencl.clrandom as clrand
 from pyopencl.reduction import ReductionKernel
 
 n = 10**7
-x = clrand.rand(queue, n, np.float64)
+x = clrand.rand(queue, n, dtype=float)
 
 rknl = ReductionKernel(ctx, np.float64,
 						neutral="0",
@@ -92,3 +93,4 @@ sknl = GenericScanKernel(ctx, np.float64,
 result = cl.array.empty_like(x)
 sknl(result, x)
 result_np = result.get()
+
