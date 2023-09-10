@@ -6,16 +6,12 @@ comm = MPI.COMM_WORLD
 rank = MPI.COMM_WORLD.Get_rank()
 size = comm.Get_size()
 
-py_size = size - 1
+py_size = size - 1 
 if rank == py_size:
     os.chdir(r"D:\1. Documentos\0. Bases de datos\0. Dofiles y Scripts\Diplomado_PUCP\Big Data\Tarea 2")
     narray = np.genfromtxt("tarea2.csv", delimiter= ",", dtype=float)
     narray = narray[~np.isnan(narray)]
-    len_narray = int(len(narray)/py_size) + 1
-    # Corrección por no ser múltiplo de 3
-    last_element = narray[-2:-1]
-    # Append the duplicated element to the original array
-    narray = np.append(narray, last_element)
+    len_narray = int(len(narray)/py_size)
     narray = narray.reshape(py_size, len_narray)
 else:
     narray = None
