@@ -8,14 +8,11 @@ size = comm.Get_size()
 
 py_size = size - 1
 if rank == py_size:
-    os.chdir(r"D:\1. Documentos\0. Bases de datos\0. Dofiles y Scripts\Diplomado_PUCP\Big Data\Tarea 2")
+    os.chdir(r"C:\Users\User\Documents\GitHub\Diplomado_PUCP_trabajos\Big Data\Tarea 2")
     narray = np.genfromtxt("tarea2.csv", delimiter= ",", dtype=float)
     narray = narray[~np.isnan(narray)]
-    len_narray = int(len(narray)/py_size) + 1
-    # Corrección por no ser múltiplo de 3
-    last_element = narray[-2:-1]
-    # Append the duplicated element to the original array
-    narray = np.append(narray, last_element)
+    narray = narray[:-1] # correción para que sea divisible entre 3
+    len_narray = int(len(narray)/py_size)
     narray = narray.reshape(py_size, len_narray)
 else:
     narray = None

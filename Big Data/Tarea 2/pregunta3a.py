@@ -6,10 +6,9 @@ size = comm.Get_size()
 
 import numpy as np
 import os
-os.chdir(r"D:\1. Documentos\0. Bases de datos\0. Dofiles y Scripts\Diplomado_PUCP\Big Data\Tarea 2")
+os.chdir(r"C:\Users\User\Documents\GitHub\Diplomado_PUCP_trabajos\Big Data\Tarea 2")
 narray = np.genfromtxt("tarea2.csv", delimiter= ",", dtype=float)
 narray = narray[~np.isnan(narray)]
 if rank == 0:
     max_1 = np.max(narray)
     print(max_1)
-

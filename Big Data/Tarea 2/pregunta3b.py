@@ -8,7 +8,7 @@ size = comm.Get_size()
 
 py_size = size - 1
 if rank == py_size:
-    os.chdir(r"D:\1. Documentos\0. Bases de datos\0. Dofiles y Scripts\Diplomado_PUCP\Big Data\Tarea 2")
+    os.chdir(r"C:\Users\User\Documents\GitHub\Diplomado_PUCP_trabajos\Big Data\Tarea 2")
     narray = np.genfromtxt("tarea2.csv", delimiter= ",", dtype=float)
     narray = narray[~np.isnan(narray)]
     len_narray = int(len(narray)/py_size)
